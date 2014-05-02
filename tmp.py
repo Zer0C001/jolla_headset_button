@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import simple_daemon
+from simple_daemon import Daemon
 import dbus
 import re
 import struct
@@ -100,8 +100,9 @@ class MediaPlayerControl():
 		self.prev()
 
 		
-class mytest():
-	def __init__(self,debug=False):
+class JollaHeadsetButtonD(Daemon):
+	def __init__(self,debug=False,pidfile="/var/run/jolla_headset_button_d.pid",*args,**kwargs):
+		super(JollaHeadsetButtonD,self).__init__(pidfile=pidfile,*args,**kwargs)
 		self.debug=debug
 		self.modems=Modems_Handler(debug=self.debug)
 		self.mediaplayer=None
@@ -161,5 +162,22 @@ class mytest():
 			
 			in_file.close()
 			
-mt=mytest(debug=True)
-mt.run()
+
+
+
+jhsbd=JollaHeadsetButtonD()
+
+if len(sys.argv)==1 or sys.argv[1]=="start":
+  jhsbd.start()
+
+elif sys.argv[1]=="debug":
+	jhsbd=JollaHeadsetButtonD(debug=True)
+	jhsbd.run()
+
+elif sys.argv[1]=="stop":
+  jhsbd.stop()
+
+elif sys.argv[1]=="restart":
+  jhsbd.restart()
+else:
+  print "unknown argument :"+sys.argv[1]
