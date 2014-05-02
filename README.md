@@ -6,7 +6,7 @@ TODO:
 	separate music managment class
 	use the dbus MPRIS spec
 
-2) add startup script
+2) demonize and add startup script
 
 3) separate click processing from detection
 
