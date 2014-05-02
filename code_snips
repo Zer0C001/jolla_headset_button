@@ -1,58 +1,16 @@
-..$ cat /sys/power/wake_lock
-mce_display_on 
-..$
+dbus:
 
+answer call:
+dbus-send --print-reply --system --dest=org.ofono /ril_0/voicecall01 org.ofono.VoiceCall.Answer
+get calls:
+dbus-send --print-reply --system --dest=org.ofono /ril_0 org.ofono.VoiceCallManager.GetCalls
+	response:
+		dict{
+			str State = "active" or "incoming"
+		}
+get modems:
+dbus-send --system --print-reply --dest=org.ofono / org.ofono.Manager.GetModems
 
-
-import dbus 
-
-sys_bus=dbus.SystemBus()
-ofono_proxy=sys_bus.get_object("org.ofono","/")
-iface = dbus.Interface(ofono_proxy, 'org.ofono.Manager')
-modem_names=[]
-for modem in iface.GetModems():
-	modem_names.append(str(modem[0]))
-print(modem_names)
-
-
-
-
-
-
-
-
-
-QML :
-audio.state == Audio.Playing
-
-
-
-
-
-
-
-
-
-import dbus
-ses_bus=dbus.SessionBus()
-proxy=ses_bus.get_object('org.mpris.MediaPlayer2.jolla_mediaplayer','/org/mpris/MediaPlayer2')
-iface=dbus.Interface(proxy,'org.mpris.MediaPlayer2.Player')
-iface.Stop()
-
-
-from dbus.mainloop.glib import DBusGMainLoop
-import dbus
-import re
-dbus_loop = DBusGMainLoop()
-ses_bus=dbus.SessionBus(mainloop=dbus_loop)
-def dbus_handler():
-  pass
-
-players=[]
-for item in ses_bus.list_names():
-    if re.match('org.mpris.MediaPlayer2',item):
-      players.append(item)
-
-print players
-
+HUP:
+dbus-send --print-reply --system --dest=org.ofono /ril_0/voicecall01 org.ofono.VoiceCall.Hangup
 
