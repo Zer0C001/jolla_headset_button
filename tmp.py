@@ -6,7 +6,7 @@ import struct
 import time
 import sys
 import io
-import shlex,subprocess
+
 
 
 class Modems_Handler():
