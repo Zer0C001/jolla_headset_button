@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import simple_daemon
 import dbus
+import re
 import struct
 import time
 import sys
@@ -9,7 +10,8 @@ import shlex,subprocess
 
 
 class Modems_Handler():
-	def __init__(self):
+	def __init__(self,debug=False):
+		self.debug=debug
 		sys_bus=dbus.SystemBus()
 		ofono_proxy=sys_bus.get_object("org.ofono","/")
 		iface = dbus.Interface(ofono_proxy, 'org.ofono.Manager')
@@ -18,6 +20,8 @@ class Modems_Handler():
 			modem_names.append(str(modem[0]))
 		self.sys_bus=sys_bus
 		self.modems=modem_names
+		if self.debug:
+			print 'found modem(s): '+str(self.modems)
 	
 	def do_click(self):
 		calls=[]
@@ -26,13 +30,15 @@ class Modems_Handler():
 		  voicecallmanager=dbus.Interface(modem_proxy,"org.ofono.VoiceCallManager")
 		  for call in voicecallmanager.GetCalls():
 		    if str(call[1]['State'])=='active':
-		      print('hup: '+str(call[0]))
-		      self.hup(call[0])
-		      return(True)
+		    	if self.debug :
+		    		print('hup: '+str(call[0]))
+		    	self.hup(call[0])
+		    	return(True)
 		    else:
 		      calls.append(call)
 		if len(calls)>0 :
-			print('Answer : '+str(calls[0][0]))
+			if self.debug:
+				print('Answer : '+str(calls[0][0]))
 			self.answer(calls[0][0])
 			return(True)
 		else:
@@ -45,12 +51,60 @@ class Modems_Handler():
 	def hup(self,call):
 		call_proxy=self.sys_bus.get_object("org.ofono",call)
 		dbus.Interface(call_proxy,'org.ofono.VoiceCall').Hangup()
+		
+class MediaPlayerControl():
+	def __init__(self,debug=False):
+		self.debug=debug
+		ses_bus=dbus.SessionBus()
+		if self.debug:
+			print 'init MediaPlayerControl'
+		players=[]
+		self.player=None
+		for item in ses_bus.list_names():
+		    if re.match('org.mpris.MediaPlayer2',item):
+		      players.append(item)
+		if self.debug:
+			print(players)
+		if len(players)>0:
+			player=dbus.Interface(ses_bus.get_object(players[0],"/org/mpris/MediaPlayer2"),'org.mpris.MediaPlayer2.Player')
+			if self.debug:
+				print player
+			self.player=player
+			
+	def toggle_pause(self):
+		try:
+			self.player.PlayPause()
+		except:
+			if self.debug:
+				print 'err'
+			pass
+	
+	def next(self):
+		try:
+			self.player.Next()
+		except:
+			if self.debug:
+				print 'err'
+			pass
+	
+	def prev(self):
+		try:
+			self.player.Previous()
+		except:
+			if self.debug:
+				print 'err'
+			pass
+
+	def prev2(self):
+		self.prev()
+		self.prev()
 
 		
 class mytest():
-	def __init__(self):
-		self.modems=Modems_Handler()
-		pass
+	def __init__(self,debug=False):
+		self.debug=debug
+		self.modems=Modems_Handler(debug=self.debug)
+		self.mediaplayer=None
 	def run(self):
 			max_presses=2
 			press_time=1.5
@@ -74,22 +128,26 @@ class mytest():
 			    fl_sec=tv_sec+float(0.000001*tv_usec)
 			    if type != 0 or code != 0 or value != 0:
 			        fl_diff=fl_sec-l_fl_sec
-			        #print("Event type %u, code %u, value: %u at %d s, %d us ; diff %d s %d us   " % (type, code, value, tv_sec, tv_usec,tv_sec-l_tv_sec,tv_usec-l_tv_usec)+"float: "+str(fl_sec)+" diff: "+str(fl_diff))
 			        if value==1 and fl_diff<=press_time and press_num<max_presses:
 			        		press_num+=1
 			        elif value==1:
 			        		press_num=0
 			        if value==1 and not self.modems.do_click():
-			        		print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
+			        		if self.debug:
+			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
 			        		if press_num==0:
-			        			subprocess.call(shlex.split("dbus-send --session --type=method_call --dest=com.jolla.mediaplayer.remotecontrol /com/jolla/mediaplayer/remotecontrol com.jolla.mediaplayer.remotecontrol.executeCommand string:\"toggle_pause\""))
+			        			self.mediaplayer=MediaPlayerControl(debug=self.debug)
+			        			if self.debug:
+			        				print self.mediaplayer
+			        			self.mediaplayer.toggle_pause()
 			        		elif press_num==1:
-			        			subprocess.call(shlex.split("dbus-send --session --type=method_call --dest=com.jolla.mediaplayer.remotecontrol /com/jolla/mediaplayer/remotecontrol com.jolla.mediaplayer.remotecontrol.executeCommand string:\"next\""))
+			        			self.mediaplayer.next()
 			        		elif press_num==2:
-			        			subprocess.call(shlex.split("dbus-send --session --type=method_call --dest=com.jolla.mediaplayer.remotecontrol /com/jolla/mediaplayer/remotecontrol com.jolla.mediaplayer.remotecontrol.executeCommand string:\"prev\""))
-			        			subprocess.call(shlex.split("dbus-send --session --type=method_call --dest=com.jolla.mediaplayer.remotecontrol /com/jolla/mediaplayer/remotecontrol com.jolla.mediaplayer.remotecontrol.executeCommand string:\"prev\""))
+			        			self.mediaplayer.prev2()
+
 			        if value==0:
-			        		print("released, fl_diff: "+str(fl_diff)+"\n")
+			        		if self.debug:
+			        			print("released, fl_diff: "+str(fl_diff)+"\n")
 				l_tv_sec=tv_sec
 				l_tv_usec=tv_usec
 				l_fl_sec=fl_sec
@@ -103,5 +161,5 @@ class mytest():
 			
 			in_file.close()
 			
-mt=mytest()
+mt=mytest(debug=True)
 mt.run()
