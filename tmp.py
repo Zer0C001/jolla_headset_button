@@ -6,6 +6,8 @@ import time
 import sys
 import io
 import shlex,subprocess
+
+
 class Modems_Handler():
 	def __init__(self):
 		sys_bus=dbus.SystemBus()
@@ -16,6 +18,7 @@ class Modems_Handler():
 			modem_names.append(str(modem[0]))
 		self.sys_bus=sys_bus
 		self.modems=modem_names
+	
 	def do_click(self):
 		calls=[]
 		for modem in self.modems:
@@ -24,14 +27,24 @@ class Modems_Handler():
 		  for call in voicecallmanager.GetCalls():
 		    if str(call[1]['State'])=='active':
 		      print('hup: '+str(call[0]))
+		      self.hup(call[0])
 		      return(True)
 		    else:
 		      calls.append(call)
 		if len(calls)>0 :
 			print('Answer : '+str(calls[0][0]))
+			self.answer(calls[0][0])
 			return(True)
 		else:
 			return(False)
+	
+	def answer(self,call):
+		call_proxy=self.sys_bus.get_object("org.ofono",call)
+		dbus.Interface(call_proxy,'org.ofono.VoiceCall').Answer()
+		
+	def hup(self,call):
+		call_proxy=self.sys_bus.get_object("org.ofono",call)
+		dbus.Interface(call_proxy,'org.ofono.VoiceCall').Hangup()
 
 		
 class mytest():
