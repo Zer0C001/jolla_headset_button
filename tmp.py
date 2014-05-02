@@ -6,8 +6,7 @@ import time
 import sys
 import io
 import shlex,subprocess
-
-class mytest():
+class Modems_Handler():
 	def __init__(self):
 		sys_bus=dbus.SystemBus()
 		ofono_proxy=sys_bus.get_object("org.ofono","/")
@@ -15,7 +14,29 @@ class mytest():
 		modem_names=[]
 		for modem in iface.GetModems():
 			modem_names.append(str(modem[0]))
-		print(modem_names)
+		self.sys_bus=sys_bus
+		self.modems=modem_names
+	def do_click(self):
+		calls=[]
+		for modem in self.modems:
+		  modem_proxy=self.sys_bus.get_object("org.ofono",modem)
+		  voicecallmanager=dbus.Interface(modem_proxy,"org.ofono.VoiceCallManager")
+		  for call in voicecallmanager.GetCalls():
+		    if str(call[1]['State'])=='active':
+		      print('hup: '+str(call[0]))
+		      return(True)
+		    else:
+		      calls.append(call)
+		if len(calls)>0 :
+			print('Answer : '+str(calls[0][0]))
+			return(True)
+		else:
+			return(False)
+
+		
+class mytest():
+	def __init__(self):
+		self.modems=Modems_Handler()
 		pass
 	def run(self):
 			max_presses=2
@@ -45,7 +66,7 @@ class mytest():
 			        		press_num+=1
 			        elif value==1:
 			        		press_num=0
-			        if value==1:
+			        if value==1 and not self.modems.do_click():
 			        		print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
 			        		if press_num==0:
 			        			subprocess.call(shlex.split("dbus-send --session --type=method_call --dest=com.jolla.mediaplayer.remotecontrol /com/jolla/mediaplayer/remotecontrol com.jolla.mediaplayer.remotecontrol.executeCommand string:\"toggle_pause\""))
