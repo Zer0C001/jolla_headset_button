@@ -1,0 +1,115 @@
+--- AudioPlayer.qml.orig	2014-05-02 18:49:21.496266330 +0300
++++ AudioPlayer.qml	2014-05-02 18:39:35.100539249 +0300
+@@ -5,6 +5,7 @@
+ import Sailfish.Silica.theme 1.0
+ import Sailfish.Media 1.0
+ import com.jolla.mediaplayer 1.0
++import org.nemomobile.dbus 1.0
+ import org.nemomobile.policy 1.0
+ 
+ DockedPanel {
+@@ -136,6 +137,7 @@
+         } else {
+             audio.play()
+         }
++        mediaPlayerNotification.call("nowPlaying", [currentItem.title, currentItem.album, currentItem.author])
+         showControls()
+     }
+ 
+@@ -440,4 +442,96 @@
+             }
+         }
+     }
++
++    DBusAdaptor {
++        id: mediaPlayerRemoteControl
++
++        property bool isPaused: false
++
++        service: "com.jolla.mediaplayer.remotecontrol"
++        iface: "com.jolla.mediaplayer.remotecontrol.Interface"
++        path: "/com/jolla/mediaplayer/remotecontrol"
++
++        signal executeCommand(string command)
++
++        onExecuteCommand: {
++            console.log("Trying to execute command: " + command)
++            switch (command) {
++            case "next":
++                songList.playNext()
++                break
++            case "toggle_pause":
++                if (isPaused) {
++                    player._play()
++                    isPaused = false
++                } else {
++                    player.pause()
++                    isPaused = true
++                }
++                break
++            case "prev":
++                songList.playPrevious()
++                break
++            }
++        }
++    }
++
++    DBusAdaptor {
++        id: mediaPlayerRemoteControlMPRIS
++	// patrial implementation of the MPRIS specification : http://specifications.freedesktop.org/mpris-spec/latest/ 
++
++        service: "org.mpris.MediaPlayer2.jolla_mediaplayer"
++        iface: "org.mpris.MediaPlayer2.Player.Interface"
++        path: "/org/mpris/MediaPlayer2"
++
++        property bool testret: true
++	
++	function rcNext() {
++		songList.playNext();
++		return(testret);
++	}
++	
++	function rcPrevious(){
++		songList.playPrevious();
++		return(testret);
++	}
++
++	function rcPause() {
++		player.pause()
++		return(testret);
++	}
++
++	function rcPlay() {
++		player._play();
++		return(testret);
++	}
++	
++	function rcPlayPause() {
++		if (audio.state == Audio.Playing) {
++                    player.pause()
++                } else {
++                    player._play()
++                }
++		return(testret);
++	}
++	
++	function rcStop() {   // since i didn't find a function to stop this will just pause
++		audio.stop()
++		return(testret);
++	}
++	
++
++    }
++
++
++
++
++    DBusInterface {
++        id: mediaPlayerNotification
++
++        destination: "com.jolla.mediaplayer.notification"
++        iface: "com.jolla.mediaplayer.notification.Interface"
++        path: "/com/jolla/mediaplayer/notification"
++    }
++
+ }
