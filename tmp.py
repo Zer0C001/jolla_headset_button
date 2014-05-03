@@ -135,6 +135,7 @@ class JollaHeadsetButtonD(Daemon):
 			
 			event = in_file.read(EVENT_SIZE)
 			press_num=0
+			reset_press_num=False
 			l_tv_sec=0
 			l_tv_usec=0
 			l_fl_sec=0.0
@@ -144,12 +145,19 @@ class JollaHeadsetButtonD(Daemon):
 			    if type != 0 or code != 0 or value != 0:
 			        fl_diff=fl_sec-l_fl_sec
 			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses:
+			        		if self.debug:
+			        			print 'press_num inc'
 			        		press_num+=1
-			        elif ( value==1 ) or ( value==0 and fl_diff>max_press_duration):
+			        elif ( value==1 ) or reset_press_num:
+			        		if self.debug:
+			        			print 'press_num clear'
+			        		reset_press_num=False
 			        		press_num=0
+			        elif value==0 and fl_diff>max_press_duration:
+			        		reset_press_num=True
 			        if value==1:
 			        		if self.debug:
-			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
+			        			print("\n\npressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
 			        		pass
 
 			        elif value==0:
@@ -159,11 +167,16 @@ class JollaHeadsetButtonD(Daemon):
 				        		if press_num==0:
 				        			self.mediaplayer=MediaPlayerControl(debug=self.debug)
 				        			if self.debug:
+				        				print "do toggle_pause"
 				        				print self.mediaplayer
 				        			self.mediaplayer.toggle_pause()
 				        		elif press_num==1:
+				        			if self.debug:
+				        				print "do next"
 				        			self.mediaplayer.next()
 				        		elif press_num==2:
+				        			if self.debug:
+				        				print "do prev2"
 				        			self.mediaplayer.prev2()
 
 				l_tv_sec=tv_sec
