@@ -1,5 +1,6 @@
 #!/usr/bin/python
 from simple_daemon import Daemon
+## simple_daemon from https://pypi.python.org/pypi/simple_daemon
 import dbus
 import re
 import struct
@@ -45,8 +46,19 @@ class Modems_Handler():
 			return(False)
 	
 	def answer(self,call):
-		call_proxy=self.sys_bus.get_object("org.ofono",call)
-		dbus.Interface(call_proxy,'org.ofono.VoiceCall').Answer()
+		try:
+			call_proxy=self.sys_bus.get_object("org.ofono",call)
+			dbus.Interface(call_proxy,'org.ofono.VoiceCall').Answer()
+		except:
+			# if exception is thrown it's probably because it's and outgoing call, so the logical thing to do is cancel it
+			if self.debug:
+					print 'err ans'  
+			try:
+				self.hup(call)
+			except Exception as e:
+				if self.debug:
+					print 'err hup outgoing: '+str(e)				
+				pass
 		
 	def hup(self,call):
 		call_proxy=self.sys_bus.get_object("org.ofono",call)
