@@ -162,7 +162,7 @@ class JollaHeadsetButtonD(Daemon):
 	def run(self):
 			max_presses=self.buttonhandler.get_max_command_string_len()-1
 			press_num_inc_time=1.5
-			long_press_duration=2.0
+			long_press_duration=1.0
 			max_press_duration=6.0
 			infile_path = "/dev/input/by-path/platform-soc-audio.0-event-headset-button"
 			#
@@ -181,6 +181,7 @@ class JollaHeadsetButtonD(Daemon):
 			l_tv_usec=0
 			l_fl_sec=0.0
 			prev_value=0
+			command_string=''
 			while event:
 			    (tv_sec, tv_usec, type, code, value) = struct.unpack(FORMAT, event)
 			    fl_sec=tv_sec+float(0.000001*tv_usec)
@@ -195,18 +196,24 @@ class JollaHeadsetButtonD(Daemon):
 			        			print '\n\npress_num clear'
 			        		reset_press_num=False
 			        		press_num=0
+			        		command_string=''
 			        elif value==0 and fl_diff>max_press_duration:
 			        		reset_press_num=True
 			        if value==1:
 			        		if self.debug:
-			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
+			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff)+" , code: "+str(code)+" , type: "+str(type))
 			        		pass
 
 			        elif value==0:
 			        		if self.debug:
 			        			print("released, fl_diff: "+str(fl_diff)+"\n")
 			        		if fl_diff<=max_press_duration:
-			        			self.buttonhandler.do_command('s'*(press_num+1))
+			        			if fl_diff>long_press_duration:
+			        				command_string+='l'
+			        			else:
+			        				command_string+='s'
+			        			print("str so far: "+command_string)
+			        			self.buttonhandler.do_command(command_string)
 
 				l_tv_sec=tv_sec
 				l_tv_usec=tv_usec
