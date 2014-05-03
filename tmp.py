@@ -120,7 +120,9 @@ class JollaHeadsetButtonD(Daemon):
 		self.mediaplayer=None
 	def run(self):
 			max_presses=2
-			press_time=1.5
+			press_num_inc_time=1.5
+			long_press_duration=2.0
+			max_press_duration=6.0
 			infile_path = "/dev/input/by-path/platform-soc-audio.0-event-headset-button"
 			#
 			#long int, long int, unsigned short, unsigned short, unsigned int
@@ -141,26 +143,29 @@ class JollaHeadsetButtonD(Daemon):
 			    fl_sec=tv_sec+float(0.000001*tv_usec)
 			    if type != 0 or code != 0 or value != 0:
 			        fl_diff=fl_sec-l_fl_sec
-			        if value==1 and fl_diff<=press_time and press_num<max_presses:
+			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses:
 			        		press_num+=1
-			        elif value==1:
+			        elif ( value==1 ) or ( value==0 and fl_diff>max_press_duration):
 			        		press_num=0
-			        if value==1 and not self.modems.do_click():
+			        if value==1:
 			        		if self.debug:
 			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
-			        		if press_num==0:
-			        			self.mediaplayer=MediaPlayerControl(debug=self.debug)
-			        			if self.debug:
-			        				print self.mediaplayer
-			        			self.mediaplayer.toggle_pause()
-			        		elif press_num==1:
-			        			self.mediaplayer.next()
-			        		elif press_num==2:
-			        			self.mediaplayer.prev2()
+			        		pass
 
-			        if value==0:
+			        elif value==0:
 			        		if self.debug:
 			        			print("released, fl_diff: "+str(fl_diff)+"\n")
+			        		if fl_diff<=max_press_duration and not self.modems.do_click():
+				        		if press_num==0:
+				        			self.mediaplayer=MediaPlayerControl(debug=self.debug)
+				        			if self.debug:
+				        				print self.mediaplayer
+				        			self.mediaplayer.toggle_pause()
+				        		elif press_num==1:
+				        			self.mediaplayer.next()
+				        		elif press_num==2:
+				        			self.mediaplayer.prev2()
+
 				l_tv_sec=tv_sec
 				l_tv_usec=tv_usec
 				l_fl_sec=fl_sec
