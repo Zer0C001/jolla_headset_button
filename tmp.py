@@ -114,14 +114,47 @@ class MediaPlayerControl():
 		self.prev()
 
 		
-class JollaHeadsetButtonD(Daemon):
-	def __init__(self,debug=False,pidfile="/var/run/jolla_headset_button_d.pid",*args,**kwargs):
-		super(JollaHeadsetButtonD,self).__init__(pidfile=pidfile,*args,**kwargs)
+class JollaHeadsetButtonHandler():
+	def __init__(self,debug=False):
+		self.max_command_string_len=3
 		self.debug=debug
 		self.modems=Modems_Handler(debug=self.debug)
 		self.mediaplayer=None
+		pass
+	def get_max_command_string_len(self):
+		return self.max_command_string_len
+	def do_command(self,command_str=''):
+		if self.debug:
+			print 'processing: '+command_str
+		if len(command_str)<1:
+			return False
+		press_num=len(command_str)-1
+		if not self.modems.do_click():
+	     		if press_num==0:
+	     			self.mediaplayer=MediaPlayerControl(debug=self.debug)
+	     			if self.debug:
+	     				print "do toggle_pause"
+	     				print self.mediaplayer
+	     			self.mediaplayer.toggle_pause()
+	     		elif press_num==1:
+	     			if self.debug:
+	     				print "do next"
+	     			self.mediaplayer.next()
+	     		elif press_num==2:
+	     			if self.debug:
+	     				print "do prev2"
+	     			self.mediaplayer.prev2()
+		pass
+		
+		
+
+class JollaHeadsetButtonD(Daemon):
+	def __init__(self,button_handler_class=JollaHeadsetButtonHandler,debug=False,pidfile="/var/run/jolla_headset_button_d.pid",*args,**kwargs):
+		super(JollaHeadsetButtonD,self).__init__(pidfile=pidfile,*args,**kwargs)
+		self.debug=debug
+		self.buttonhandler=button_handler_class(debug=self.debug)
 	def run(self):
-			max_presses=2
+			max_presses=self.buttonhandler.get_max_command_string_len()-1
 			press_num_inc_time=1.5
 			long_press_duration=2.0
 			max_press_duration=6.0
@@ -166,21 +199,8 @@ class JollaHeadsetButtonD(Daemon):
 			        elif value==0:
 			        		if self.debug:
 			        			print("released, fl_diff: "+str(fl_diff)+"\n")
-			        		if fl_diff<=max_press_duration and not self.modems.do_click():
-				        		if press_num==0:
-				        			self.mediaplayer=MediaPlayerControl(debug=self.debug)
-				        			if self.debug:
-				        				print "do toggle_pause"
-				        				print self.mediaplayer
-				        			self.mediaplayer.toggle_pause()
-				        		elif press_num==1:
-				        			if self.debug:
-				        				print "do next"
-				        			self.mediaplayer.next()
-				        		elif press_num==2:
-				        			if self.debug:
-				        				print "do prev2"
-				        			self.mediaplayer.prev2()
+			        		if fl_diff<=max_press_duration:
+			        			self.buttonhandler.do_command('s'*(press_num+1))
 
 				l_tv_sec=tv_sec
 				l_tv_usec=tv_usec

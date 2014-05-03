@@ -3,11 +3,9 @@ TODO:
 
 1) add startup script
 
-2) separate click processing from detection
+2) add install instructions
 
-3) add install instructions
-
-4) package and upload to openrepos.net ?
+3) package and upload to openrepos.net ?
 
 
 USAGE:
