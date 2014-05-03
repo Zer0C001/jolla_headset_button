@@ -141,12 +141,13 @@ class JollaHeadsetButtonD(Daemon):
 			l_tv_sec=0
 			l_tv_usec=0
 			l_fl_sec=0.0
+			prev_value=0
 			while event:
 			    (tv_sec, tv_usec, type, code, value) = struct.unpack(FORMAT, event)
 			    fl_sec=tv_sec+float(0.000001*tv_usec)
 			    if type != 0 or code != 0 or value != 0:
 			        fl_diff=fl_sec-l_fl_sec
-			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses:
+			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses and prev_value==0:
 			        		if self.debug:
 			        			print '\npress_num inc'
 			        		press_num+=1
@@ -184,6 +185,7 @@ class JollaHeadsetButtonD(Daemon):
 				l_tv_sec=tv_sec
 				l_tv_usec=tv_usec
 				l_fl_sec=fl_sec
+				prev_value=value
 			   #else:
 			        # Events with code, type and value == 0 are "separator" events
 			    #    print("===========================================")	
