@@ -25,27 +25,31 @@ class Modems_Handler():
 			print 'found modem(s): '+str(self.modems)
 	
 	def do_click(self):
+		  calls=self.get_calls()
+		  for call in calls:
+		    if str(call['State'])=='active' or str(call['State'])=="alerting" or str(call['State'])=="dialing":
+		    	if self.debug :
+		    		print('hup: '+str(call['call']))
+		    	self.hup(call['call'])
+		    	return(True)
+		  if len(calls)>0 :
+			if self.debug:
+				print('Answer : '+str(calls[0]['call']))
+			self.answer(calls[0]['call'])
+			return(True)
+		  else:
+			return(False)
+			
+	def get_calls(self):
 		calls=[]
 		for modem in self.modems:
 		  modem_proxy=self.sys_bus.get_object("org.ofono",modem)
 		  voicecallmanager=dbus.Interface(modem_proxy,"org.ofono.VoiceCallManager")
 		  for call in voicecallmanager.GetCalls():
-		    if str(call[1]['State'])=='active' or str(call[1]['State'])=="alerting":
-		    	if self.debug :
-		    		print('hup: '+str(call[0]))
-		    	self.hup(call[0])
-		    	return(True)
-		    else:
-		      if self.debug:
-		      	print call
-		      calls.append(call)
-		if len(calls)>0 :
-			if self.debug:
-				print('Answer : '+str(calls[0][0]))
-			self.answer(calls[0][0])
-			return(True)
-		else:
-			return(False)
+		  		calls.append({'call':call[0],'State':call[1]['State']})
+		if self.debug:
+			print calls
+		return calls		  		
 	
 	def answer(self,call):
 		try:
@@ -65,6 +69,8 @@ class Modems_Handler():
 	def hup(self,call):
 		call_proxy=self.sys_bus.get_object("org.ofono",call)
 		dbus.Interface(call_proxy,'org.ofono.VoiceCall').Hangup()
+
+
 		
 class MediaPlayerControl():
 	def __init__(self,debug=False):
