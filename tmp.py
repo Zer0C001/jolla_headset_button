@@ -30,12 +30,14 @@ class Modems_Handler():
 		  modem_proxy=self.sys_bus.get_object("org.ofono",modem)
 		  voicecallmanager=dbus.Interface(modem_proxy,"org.ofono.VoiceCallManager")
 		  for call in voicecallmanager.GetCalls():
-		    if str(call[1]['State'])=='active':
+		    if str(call[1]['State'])=='active' or str(call[1]['State'])=="alerting":
 		    	if self.debug :
 		    		print('hup: '+str(call[0]))
 		    	self.hup(call[0])
 		    	return(True)
 		    else:
+		      if self.debug:
+		      	print call
 		      calls.append(call)
 		if len(calls)>0 :
 			if self.debug:
@@ -50,7 +52,7 @@ class Modems_Handler():
 			call_proxy=self.sys_bus.get_object("org.ofono",call)
 			dbus.Interface(call_proxy,'org.ofono.VoiceCall').Answer()
 		except:
-			# if exception is thrown it's probably because it's and outgoing call, so the logical thing to do is cancel it
+			# Error answering ? Let's try HUP 
 			if self.debug:
 					print 'err ans'  
 			try:
@@ -146,18 +148,18 @@ class JollaHeadsetButtonD(Daemon):
 			        fl_diff=fl_sec-l_fl_sec
 			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses:
 			        		if self.debug:
-			        			print 'press_num inc'
+			        			print '\npress_num inc'
 			        		press_num+=1
 			        elif ( value==1 ) or reset_press_num:
 			        		if self.debug:
-			        			print 'press_num clear'
+			        			print '\n\npress_num clear'
 			        		reset_press_num=False
 			        		press_num=0
 			        elif value==0 and fl_diff>max_press_duration:
 			        		reset_press_num=True
 			        if value==1:
 			        		if self.debug:
-			        			print("\n\npressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
+			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff))
 			        		pass
 
 			        elif value==0:
