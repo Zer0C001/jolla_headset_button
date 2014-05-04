@@ -218,7 +218,7 @@ class JollaHeadsetButtonD(Daemon):
 			        			this_entry['command_string']=''
 			        		if this_entry['current_time']-this_entry['last_time']>max_press_duration:
 			        			if self.debug:
-			        				print 'clear debug string because of max_press_duration'
+			        				print 'clear command string because of max_press_duration'
 			        			this_entry['command_string']=''
 			        		elif this_entry['current_time']-this_entry['last_time']>long_press_duration:
 			        			this_entry['command_string']+='l'
