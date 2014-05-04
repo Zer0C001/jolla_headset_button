@@ -144,7 +144,6 @@ class JollaHeadsetButtonHandler():
 		if self.debug:
 			print 'processing: '+command_str
 		press_num=len(command_str)-1
-		self.reset_command_string=False
 		if not self.modems.do_click():
 	     		if press_num==0:
 	     			self.mediaplayer=MediaPlayerControl(debug=self.debug)
