@@ -213,8 +213,12 @@ class JollaHeadsetButtonD(Daemon):
 			        		
 			        elif this_entry.has_key('last_time') and value==0 and this_entry.has_key('last_value') and this_entry['last_value']==1:
 			        		if self.buttonhandler.must_reset_command_string_on(this_entry):
+			        			if self.debug:
+			        				print 'clear command string because of buttonhandler'
 			        			this_entry['command_string']=''
 			        		if this_entry['current_time']-this_entry['last_time']>max_press_duration:
+			        			if self.debug:
+			        				print 'clear debug string because of max_press_duration'
 			        			this_entry['command_string']=''
 			        		elif this_entry['current_time']-this_entry['last_time']>long_press_duration:
 			        			this_entry['command_string']+='l'
