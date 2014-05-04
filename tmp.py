@@ -129,12 +129,22 @@ class JollaHeadsetButtonHandler():
 		pass
 	def get_max_command_string_len(self):
 		return self.max_command_string_len
-	def do_command(self,command_str=''):
+	def must_reset_command_string_on(self,command_dict={}):
+		retval=False
+		if ( not command_dict.has_key('command_string') ) or ( self.max_command_string_len<=len(command_dict['command_string']) ) :
+			retval=True
+		return retval
+	def do_command(self,command_dict={}):
+		if command_dict.has_key('command_string') and len(command_dict['command_string'])>0:
+			command_str=command_dict['command_string']
+		else:
+			if self.debug:
+				print 'no command string'
+			return False
 		if self.debug:
 			print 'processing: '+command_str
-		if len(command_str)<1:
-			return False
 		press_num=len(command_str)-1
+		self.reset_command_string=False
 		if not self.modems.do_click():
 	     		if press_num==0:
 	     			self.mediaplayer=MediaPlayerControl(debug=self.debug)
@@ -150,6 +160,8 @@ class JollaHeadsetButtonHandler():
 	     			if self.debug:
 	     				print "do prev2"
 	     			self.mediaplayer.prev2()
+	     		else:
+	     			return False
 		pass
 		
 		
@@ -175,56 +187,53 @@ class JollaHeadsetButtonD(Daemon):
 			in_file = io.open(infile_path, "rb",EVENT_SIZE)
 			
 			event = in_file.read(EVENT_SIZE)
-			press_num=0
-			reset_press_num=False
-			l_tv_sec=0
-			l_tv_usec=0
-			l_fl_sec=0.0
-			prev_value=0
-			command_string=''
+			commands_dict_list=[]
 			while event:
-			    (tv_sec, tv_usec, type, code, value) = struct.unpack(FORMAT, event)
+			    (tv_sec, tv_usec, event_type, code, value) = struct.unpack(FORMAT, event)
 			    fl_sec=tv_sec+float(0.000001*tv_usec)
-			    if type != 0 or code != 0 or value != 0:
-			        fl_diff=fl_sec-l_fl_sec
-			        if value==1 and fl_diff<=press_num_inc_time and press_num<max_presses and prev_value==0:
-			        		if self.debug:
-			        			print '\npress_num inc'
-			        		press_num+=1
-			        elif ( value==1 ) or reset_press_num:
-			        		if self.debug:
-			        			print '\n\npress_num clear'
-			        		reset_press_num=False
-			        		press_num=0
-			        		command_string=''
-			        elif value==0 and fl_diff>max_press_duration:
-			        		reset_press_num=True
-			        if value==1:
-			        		if self.debug:
-			        			print("pressed, press_num: "+str(press_num)+" , fl_diff: "+str(fl_diff)+" , code: "+str(code)+" , type: "+str(type))
-			        		pass
+			    if event_type != 0 or code != 0 or value != 0:
+			        this_entry=None
+			        this_entry_already_in_list=False
+			        for entry in commands_dict_list:
+			        		if entry['event_type']==event_type and entry['code']==code:
+			        			this_entry=entry
+			        			this_entry_already_in_list=True
+			        if this_entry==None:
+			        		this_entry={'event_type':event_type, 'code':code, 'current_value':value, 'current_time':fl_sec, 'command_string':''}
+			        		commands_dict_list.append(this_entry)
+			        this_entry_index=commands_dict_list.index(this_entry)
+			        
+			        
+			        if this_entry_already_in_list:
+			        		commands_dict_list[this_entry_index].update({ 'last_time':this_entry['current_time'], 'last_value':this_entry['current_value'], 'current_value':value, 'current_time':fl_sec })
+			        		this_entry=commands_dict_list[this_entry_index]
+			        		
+			        			
+			        if ( this_entry.has_key('last_time') and value==1 and this_entry['current_time']-this_entry['last_time']>press_num_inc_time )  or  ( this_entry.has_key('last_value') and this_entry['last_value']==value ) :
+			        		this_entry['command_string']=''
+			        		
+			        elif this_entry.has_key('last_time') and value==0 and this_entry.has_key('last_value') and this_entry['last_value']==1:
+			        		if self.buttonhandler.must_reset_command_string_on(this_entry):
+			        			this_entry['command_string']=''
+			        		if this_entry['current_time']-this_entry['last_time']>max_press_duration:
+			        			this_entry['command_string']=''
+			        		elif this_entry['current_time']-this_entry['last_time']>long_press_duration:
+			        			this_entry['command_string']+='l'
+			        		else:
+			        			this_entry['command_string']+='s'
+			        		if len(this_entry['command_string'])>0:
+			        			self.buttonhandler.do_command(this_entry)
 
-			        elif value==0:
-			        		if self.debug:
-			        			print("released, fl_diff: "+str(fl_diff)+"\n")
-			        		if fl_diff<=max_press_duration:
-			        			if fl_diff>long_press_duration:
-			        				command_string+='l'
-			        			else:
-			        				command_string+='s'
-			        			print("str so far: "+command_string)
-			        			self.buttonhandler.do_command(command_string)
 
-				l_tv_sec=tv_sec
-				l_tv_usec=tv_usec
-				l_fl_sec=fl_sec
-				prev_value=value
+			        if self.debug:
+			        		print commands_dict_list
+			        		print this_entry
+			        		print this_entry_index
+			        		if this_entry.has_key('last_time'):
+			        			print this_entry['current_time']-this_entry['last_time']
+			        		print "\n\n"
 			   #else:
 			        # Events with code, type and value == 0 are "separator" events
-			    #    print("===========================================")	
-			    #time.sleep(0.5)
-			    #s=in_file.peek(EVENT_SIZE)
-			    #print("s"+s)
 			    event = in_file.read(EVENT_SIZE)
 			
 			in_file.close()
